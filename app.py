@@ -8,7 +8,7 @@ app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'  # Change this to a secure secret key
 
 # Configure Google Gemini AI
-genai.configure(api_key="AIzaSyA5MdL4xpcqiIZv3c_JmXLXTrIMl3hPLlw")
+genai.configure(api_key="AIzaSyDRYel9bkqYXQjCqj7WVJt-bEg331kOyEw")
 
 # Configure upload folder
 UPLOAD_FOLDER = 'uploads'
