@@ -39,32 +39,9 @@
             transition: width 0.3s ease;
         }
 
-        .preview-container {
-            max-width: 640px;
-            margin: 20px auto;
-            display: none;
-        }
-
-        .preview-container video {
-            width: 100%;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-
-        .upload-area {
-            border: 2px dashed #ccc;
-            padding: 20px;
-            text-align: center;
-            cursor: pointer;
-            border-radius: 5px;
-        }
-
-        .upload-button {
-            display: none;
-        }
-
         .processing-steps {
             opacity: 0;
+            transform: translateY(10px);
             transition: all 0.3s ease;
         }
 
@@ -73,9 +50,30 @@
             transform: translateY(0);
         }
 
-        .error-message {
-            color: #f00;
-            font-weight: bold;
+        .step-complete {
+            color: #10b981;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .preview-container {
+            max-width: 400px;
+            margin: 20px auto;
+            display: none;
+        }
+
+        .preview-container video {
+            width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
     </style>
 </head>
@@ -95,7 +93,7 @@
             </h2>
 
             <form id="uploadForm" class="space-y-4">
-                <div class="upload-area" id="file-area">
+                <div class="upload-area border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
                     <input type="file" id="video" accept="video/*" class="hidden" required>
                     <label for="video" class="cursor-pointer">
                         <div class="text-gray-500">
@@ -113,8 +111,8 @@
                 </div>
 
                 <div class="text-center">
-                    <button id="uploadButton" type="submit"
-                        class="bg-blue-500 text-white px-6 py-2 rounded-lg font-medium inline-flex items-center hover:bg-blue-600 transition-all hidden">
+                    <button type="submit"
+                        class="bg-blue-500 text-white px-6 py-2 rounded-lg font-medium inline-flex items-center hover:bg-blue-600 transition-all">
                         <i class="fas fa-upload mr-2"></i>Upload
                     </button>
                 </div>
@@ -158,6 +156,11 @@
                     </div>
                 </div>
             </div>
+
+            <div id="uploadStatus" class="mt-4">
+                <div id="status" class="hidden p-4 rounded-lg bg-green-50 text-green-700"></div>
+                <div id="error" class="hidden p-4 rounded-lg bg-red-50 text-red-700"></div>
+            </div>
         </div>
 
         <!-- Question Section -->
@@ -196,145 +199,224 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const fileInput = document.getElementById('video');
-            const uploadButton = document.getElementById('uploadButton');
-            const previewContainer = document.getElementById('previewContainer');
-            const videoPreview = document.getElementById('videoPreview');
-            const uploadProgress = document.getElementById('uploadProgress');
-            const processingSteps = document.getElementById('processingSteps');
-            const status = document.getElementById('status');
-            const error = document.getElementById('error');
-            const questionInput = document.getElementById('question');
-            const askSpinner = document.getElementById('askSpinner');
-            const response = document.getElementById('response');
-            const responseText = document.getElementById('responseText');
+        const uploadForm = document.getElementById('uploadForm');
+        const questionForm = document.getElementById('questionForm');
+        const status = document.getElementById('status');
+        const error = document.getElementById('error');
+        const response = document.getElementById('response');
+        const responseText = document.getElementById('responseText');
+        const questionInput = document.getElementById('question');
+        const askSpinner = document.getElementById('askSpinner');
+        const uploadProgress = document.getElementById('uploadProgress');
+        const uploadProgressBar = document.getElementById('uploadProgressBar');
+        const uploadPercentage = document.getElementById('uploadPercentage');
+        const processingSteps = document.getElementById('processingSteps');
+        const processingProgressBar = document.getElementById('processingProgressBar');
+        const videoPreview = document.getElementById('videoPreview');
+        const previewContainer = document.getElementById('previewContainer');
 
-            // Initially hide the upload button and disable question input
-            if (uploadButton) uploadButton.classList.add('hidden');
-            if (processingSteps) processingSteps.classList.remove('show');
-            if (status) status.classList.add('hidden');
-            if (error) error.classList.add('hidden');
-            if (questionInput) questionInput.disabled = true;
+        // Preview selected video using FileReader for larger files
+        document.getElementById('video').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Use FileReader for better handling of large video files
+                const reader = new FileReader();
 
-            // Handle video selection
-            fileInput.addEventListener('change', function () {
-                const file = this.files[0];
-                if (file) {
-                    // Display the upload button and preview container
-                    if (uploadButton) uploadButton.classList.remove('hidden');
-                    if (previewContainer) previewContainer.style.display = 'block';
+                // When the file is loaded, set it as the video source
+                reader.onload = function (event) {
+                    videoPreview.src = event.target.result;
+                    previewContainer.style.display = 'block';
 
-                    // Set the video preview source
-                    const videoUrl = URL.createObjectURL(file);
-                    if (videoPreview) videoPreview.src = videoUrl;
-
-                    // Add error handling for the video preview
-                    if (videoPreview) {
-                        videoPreview.addEventListener('error', function () {
-                            console.error('Error loading video preview');
-                            if (previewContainer) previewContainer.style.display = 'none';
-                            alert("Failed to load video preview. Please try another video.");
-                            if (uploadButton) uploadButton.classList.add('hidden');
-                        });
-                    }
-                } else {
-                    // Hide the upload button and preview container if no file is selected
-                    if (uploadButton) uploadButton.classList.add('hidden');
-                    if (previewContainer) previewContainer.style.display = 'none';
-                }
-            });
-
-            // Handle form submission
-            const uploadForm = document.getElementById('uploadForm');
-            uploadForm.addEventListener('submit', async function (e) {
-                e.preventDefault();
-                const formData = new FormData();
-                const videoFile = fileInput.files[0];
-                if (videoFile) formData.append('video', videoFile);
-
-                try {
-                    if (uploadProgress) uploadProgress.classList.remove('hidden');
-                    if (processingSteps) processingSteps.classList.add('show');
-                    if (status) status.classList.add('hidden');
-                    if (error) error.classList.add('hidden');
-
-                    const xhr = new XMLHttpRequest();
-                    xhr.upload.onprogress = function (e) {
-                        if (e.lengthComputable) {
-                            const percentComplete = (e.loaded / e.total) * 100;
-                            const uploadProgressBar = document.getElementById('uploadProgressBar');
-                            const uploadPercentage = document.getElementById('uploadPercentage');
-                            if (uploadProgressBar) uploadProgressBar.style.width = `${percentComplete}%`;
-                            if (uploadPercentage) uploadPercentage.textContent = `${Math.round(percentComplete)}%`;
-                        }
-                    };
-
-                    xhr.onload = async function () {
-                        if (xhr.status === 200) {
-                            const response = JSON.parse(xhr.responseText);
-                            if (status) {
-                                status.textContent = response.message || "Video processing completed successfully!";
-                                status.classList.remove('hidden');
-                            }
-                            if (questionInput) questionInput.disabled = false; // Enable question input after successful processing
-                        } else {
-                            throw new Error(JSON.parse(xhr.responseText).error);
-                        }
-                    };
-
-                    xhr.onerror = function () {
-                        throw new Error('Upload failed');
-                    };
-
-                    xhr.open('POST', '/upload', true);
-                    xhr.send(formData);
-                } catch (err) {
-                    if (error) {
-                        error.textContent = err.message;
-                        error.classList.remove('hidden');
-                    }
-                }
-            });
-
-            // Handle question submission
-            const questionForm = document.getElementById('questionForm');
-            questionForm.addEventListener('submit', async function (e) {
-                e.preventDefault();
-                const question = questionInput.value;
-
-                if (!question) {
-                    alert("Please enter a question.");
-                    return;
-                }
-
-                try {
-                    if (askSpinner) askSpinner.classList.remove('hidden');
-                    if (response) response.classList.add('hidden');
-
-                    const res = await fetch('/ask', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ question }),
+                    // Listen for the video to be ready
+                    videoPreview.addEventListener('canplaythrough', function () {
+                        console.log('Video preview is ready to play!');
                     });
 
-                    if (res.ok) {
-                        const data = await res.json();
-                        responseText.innerHTML = data.answer || "No answer available.";
-                        if (response) response.classList.remove('hidden');
-                    } else {
-                        throw new Error("Failed to fetch the answer.");
-                    }
-                } catch (err) {
-                    alert(err.message || "An error occurred while processing your question.");
-                } finally {
-                    if (askSpinner) askSpinner.classList.add('hidden');
-                }
-            });
+                    // Error handling if the video fails to load
+                    videoPreview.addEventListener('error', function () {
+                        console.error('Error loading video preview');
+                        previewContainer.style.display = 'none';  // Hide preview if error occurs
+                    });
+                };
+
+                // Read the file as DataURL (Base64 encoding)
+                reader.readAsDataURL(file);
+
+                // Ensure that the preview container is reset before attempting to load a new video
+                previewContainer.style.display = 'none';
+                videoPreview.src = '';  // Clear the previous video source
+            } else {
+                console.error("No video file selected");
+            }
         });
+
+        function updateProcessingStep(step) {
+            const steps = {
+                1: document.getElementById('step1'),
+                2: document.getElementById('step2'),
+                3: document.getElementById('step3'),
+                4: document.getElementById('step4')
+            };
+
+            // Update icons and styles for completed and current steps
+            for (let i = 1; i <= 4; i++) {
+                if (i < step) {
+                    steps[i].querySelector('i').className = 'fas fa-check text-green-500';
+                    steps[i].classList.add('text-green-500');
+                } else if (i === step) {
+                    steps[i].querySelector('i').className = 'fas fa-circle-notch fa-spin text-blue-500';
+                    steps[i].classList.remove('text-gray-400');
+                } else {
+                    steps[i].querySelector('i').className = 'fas fa-circle-notch text-gray-400';
+                    steps[i].classList.add('text-gray-400');
+                }
+            }
+
+            // Update processing progress bar
+            const progress = ((step - 1) / 3) * 100;
+            processingProgressBar.style.width = `${progress}%`;
+        }
+
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData();
+            const videoFile = document.getElementById('video').files[0];
+            formData.append('video', videoFile);
+
+            try {
+                // Show upload progress
+                uploadProgress.classList.remove('hidden');
+                processingSteps.classList.add('show');
+                status.classList.add('hidden');
+                error.classList.add('hidden');
+
+                // Simulate upload progress
+                const xhr = new XMLHttpRequest();
+                xhr.upload.onprogress = function (e) {
+                    if (e.lengthComputable) {
+                        const percentComplete = (e.loaded / e.total) * 100;
+                        uploadProgressBar.style.width = percentComplete + '%';
+                        uploadPercentage.textContent = Math.round(percentComplete) + '%';
+                    }
+                };
+
+                // Modify the response handling to display the video preview URL
+                xhr.onload = async function () {
+                    if (xhr.status === 200) {
+                        // Start processing steps simulation
+                        const processingSteps = [1000, 2000, 3000, 2000]; // Time for each step in ms
+
+                        for (let i = 1; i <= 4; i++) {
+                            updateProcessingStep(i);
+                            await new Promise(resolve => setTimeout(resolve, processingSteps[i - 1]));
+                        }
+
+                        const response = JSON.parse(xhr.responseText);
+                        status.textContent = response.message;
+                        status.classList.remove('hidden');
+                        questionInput.disabled = false;
+
+                        // Add the video preview functionality here
+                        if (response.video_url) {
+                            videoPreview.src = response.video_url;  // Set the video preview source to the URL provided by the backend
+                            previewContainer.style.display = 'block';  // Show the video preview container
+                        }
+                    } else {
+                        throw new Error(JSON.parse(xhr.responseText).error);
+                    }
+                };
+
+                xhr.onerror = function () {
+                    throw new Error('Upload failed');
+                };
+
+                xhr.open('POST', '/upload', true);
+                xhr.send(formData);
+
+            } catch (err) {
+                error.textContent = err.message;
+                error.classList.remove('hidden');
+            }
+        });
+
+        // Function to convert timestamps into clickable links
+        function convertTimestamps(responseText) {
+            // Regular expression to match timestamps in format HH:MM:SS or MM:SS
+            const timestampRegex = /(\d{1,2}:\d{2}(:\d{2})?)/g;
+
+            return responseText.replace(timestampRegex, (match) => {
+                // Extract the timestamp and create a clickable link
+                return `<a href="#" class="timestamp-link" data-time="${match}">${match}</a>`;
+            });
+        }
+
+        // Helper function to convert timestamp (HH:MM:SS or MM:SS) to seconds
+        function parseTimestamp(timestamp) {
+            const timeParts = timestamp.split(':');
+            let seconds = 0;
+            if (timeParts.length === 3) {
+                // HH:MM:SS
+                seconds = parseInt(timeParts[0]) * 3600 + parseInt(timeParts[1]) * 60 + parseInt(timeParts[2]);
+            } else if (timeParts.length === 2) {
+                // MM:SS
+                seconds = parseInt(timeParts[0]) * 60 + parseInt(timeParts[1]);
+            }
+            return seconds;
+        }
+
+        questionForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const question = document.getElementById('question').value;
+
+            try {
+                askSpinner.classList.remove('hidden');
+                response.classList.add('hidden');
+
+                const res = await fetch('/ask', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ question })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    let answer = data.answer;
+                    // Convert timestamps in the AI answer to clickable links
+                    answer = convertTimestamps(answer);
+
+                    // Display the response
+                    responseText.innerHTML = answer;
+                    response.classList.remove('hidden');
+
+                    // Add event listeners for the clickable timestamps
+                    const timestampLinks = document.querySelectorAll('.timestamp-link');
+                    timestampLinks.forEach(link => {
+                        link.addEventListener('click', function (e) {
+                            e.preventDefault();
+                            const time = link.getAttribute('data-time');
+                            const videoTime = parseTimestamp(time);
+                            videoPreview.currentTime = videoTime; // Seek the video to that time
+                        });
+                    });
+
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (err) {
+                error.textContent = err.message;
+                error.classList.remove('hidden');
+            } finally {
+                askSpinner.classList.add('hidden');
+            }
+        });
+
+        // Initially disable question input until video is processed
+        questionInput.disabled = true;
     </script>
+
 </body>
 
 </html>
