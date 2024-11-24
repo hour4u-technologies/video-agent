@@ -194,7 +194,6 @@
             </div>
         </div>
     </div>
-
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const fileInput = document.getElementById('video');
@@ -217,10 +216,22 @@
             if (error) error.classList.add('hidden');
             if (questionInput) questionInput.disabled = true;
 
+            // Clear previous state when a new video is uploaded
+            function clearPreviousState() {
+                if (videoPreview) videoPreview.src = ''; // Clear the video preview
+                if (response) response.classList.add('hidden'); // Hide previous response
+                if (responseText) responseText.innerHTML = ''; // Clear the answer
+                if (status) status.classList.add('hidden'); // Hide the status message
+                if (error) error.classList.add('hidden'); // Hide any errors
+            }
+
             // Handle video selection
             fileInput.addEventListener('change', function () {
                 const file = this.files[0];
                 if (file) {
+                    // Clear any previous state
+                    clearPreviousState();
+
                     // Display the upload button and preview container
                     if (uploadButton) uploadButton.classList.remove('hidden');
                     if (previewContainer) previewContainer.style.display = 'block';
@@ -323,6 +334,7 @@
                 if (videoFile) formData.append('video', videoFile);
 
                 try {
+                    // Show upload progress and processing steps
                     if (uploadProgress) uploadProgress.classList.remove('hidden');
                     if (processingSteps) processingSteps.classList.add('show');
                     if (status) status.classList.add('hidden');
@@ -374,7 +386,7 @@
                 }
             });
 
-            // Handle question submission
+            // Handle question submission for video processing
             const questionForm = document.getElementById('questionForm');
             questionForm.addEventListener('submit', async function (e) {
                 e.preventDefault();
