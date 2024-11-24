@@ -194,7 +194,6 @@
             </div>
         </div>
     </div>
-
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const fileInput = document.getElementById('video');
@@ -205,10 +204,14 @@
             const processingSteps = document.getElementById('processingSteps');
             const status = document.getElementById('status');
             const error = document.getElementById('error');
+            const questionInput = document.getElementById('question');
 
-            // Ensure upload button is initially hidden
+            // Ensure upload button and processing steps are initially hidden
             if (uploadButton) uploadButton.classList.add('hidden');
             if (processingSteps) processingSteps.classList.remove('show');
+            if (status) status.classList.add('hidden');
+            if (error) error.classList.add('hidden');
+            if (questionInput) questionInput.disabled = true;
 
             // Handle video selection
             fileInput.addEventListener('change', function () {
@@ -221,12 +224,6 @@
                     // Set the video preview source
                     const videoUrl = URL.createObjectURL(file);
                     if (videoPreview) videoPreview.src = videoUrl;
-
-                    // Show upload progress and processing steps
-                    if (uploadProgress) uploadProgress.classList.remove('hidden');
-                    if (processingSteps) processingSteps.classList.add('show');
-                    if (status) status.classList.add('hidden');
-                    if (error) error.classList.add('hidden');
 
                     // Add error handling for the video preview
                     if (videoPreview) {
@@ -315,9 +312,12 @@
 
                             const response = JSON.parse(xhr.responseText);
                             if (status) {
-                                status.textContent = response.message;
+                                status.textContent = response.message || "Video processing completed successfully!";
                                 status.classList.remove('hidden');
                             }
+
+                            // Enable question input after successful processing
+                            if (questionInput) questionInput.disabled = false;
                         } else {
                             throw new Error(JSON.parse(xhr.responseText).error);
                         }
