@@ -51,11 +51,6 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
 
-        .error-message {
-            color: #f00;
-            font-weight: bold;
-        }
-
         .upload-area {
             border: 2px dashed #ccc;
             padding: 20px;
@@ -76,6 +71,11 @@
         .processing-steps.show {
             opacity: 1;
             transform: translateY(0);
+        }
+
+        .error-message {
+            color: #f00;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -206,24 +206,32 @@
         const uploadPercentage = document.getElementById('uploadPercentage');
         const status = document.getElementById('status');
         const error = document.getElementById('error');
-        const questionInput = document.getElementById('question');
-        const askSpinner = document.getElementById('askSpinner');
         const processingSteps = document.getElementById('processingSteps');
+        const questionInput = document.getElementById('question');
 
         // Initially hide elements
         uploadButton.classList.add('hidden');
         uploadProgress.classList.add('hidden');
         processingSteps.classList.add('hidden');
+        previewContainer.style.display = 'none';
 
         // Handle video selection
         fileInput.addEventListener('change', function () {
             const file = this.files[0];
             if (file) {
-                // Show the upload button
-                uploadButton.classList.remove('hidden');
+                uploadButton.classList.remove('hidden');  // Show the upload button
+                previewContainer.style.display = 'block';  // Show preview container
+                const videoUrl = URL.createObjectURL(file);
+                videoPreview.src = videoUrl;
+
+                // Show the upload progress and processing steps once the video is ready
+                uploadProgress.classList.remove('hidden');
+                processingSteps.classList.add('show');
+                status.classList.add('hidden');
+                error.classList.add('hidden');
             } else {
-                // Hide the upload button
                 uploadButton.classList.add('hidden');
+                previewContainer.style.display = 'none';
             }
         });
 
