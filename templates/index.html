@@ -222,6 +222,17 @@
                 const url = URL.createObjectURL(file);
                 videoPreview.src = url;
                 previewContainer.style.display = 'block';
+
+                // Add a load event to ensure the video is ready before showing it
+                videoPreview.onloadmetadata = () => {
+                    console.log('Video preview loaded successfully');
+                    // Perform any additional operations if necessary after the video is loaded
+                };
+
+                videoPreview.onerror = () => {
+                    console.error('Error loading video preview');
+                    previewContainer.style.display = 'none';  // Hide preview in case of error
+                };
             }
         });
 
