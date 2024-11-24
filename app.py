@@ -3,6 +3,7 @@ import os
 import time
 import google.generativeai as genai
 from werkzeug.utils import secure_filename
+import subprocess
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'  # Change this to a secure secret key
@@ -56,6 +57,18 @@ def initialize_gemini_model():
 def index():
     return render_template('index.html')
 
+
+def convert_to_mp4(input_path, output_path):
+    """Converts an AVI file to MP4 using ffmpeg."""
+    command = [
+        "ffmpeg", "-i", input_path,
+        "-c:v", "libx264", "-preset", "fast",
+        "-crf", "23",
+        "-c:a", "aac", "-b:a", "128k",
+        output_path
+    ]
+    subprocess.run(command, check=True)
+
 @app.route('/upload', methods=['POST'])
 def upload_video():
     if 'video' not in request.files:
@@ -69,24 +82,19 @@ def upload_video():
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
-        
-        try:
-            # Make the file publicly accessible by saving it in the static folder
-            public_url = f'/static/{filename}'  # Video URL path
-            
-            # Upload to Gemini (This step is retained for AI processing)
-            gemini_file = upload_to_gemini(filepath, mime_type="video/mp4")
-            wait_for_files_active([gemini_file])
-            
-            # Store the file URI and URL in session
-            session['video_file_uri'] = gemini_file.uri
-            session['video_file_name'] = gemini_file.name
-            session['video_file_url'] = public_url  # Save the public URL for the preview
-            
-            return jsonify({'message': 'Video processed successfully', 'video_url': public_url}), 200
-        except Exception as e:
-            return jsonify({'error': str(e)}), 500
-    
+
+        if filename.lower().endswith('.avi'):
+            try:
+                output_filepath = os.path.splitext(filepath)[0] + '.mp4'
+                convert_to_mp4(filepath, output_filepath)
+                os.remove(filepath)  # Remove original AVI file
+                filepath = output_filepath  # Update path to converted file
+            except Exception as e:
+                return jsonify({'error': f'Error converting video: {str(e)}'}), 500
+
+        # Continue with the existing processing logic
+        return jsonify({'message': 'Video uploaded and converted successfully', 'video_url': filepath}), 200
+
     return jsonify({'error': 'Invalid file type'}), 400
 
 @app.route('/ask', methods=['POST'])

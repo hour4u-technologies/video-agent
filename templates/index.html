@@ -194,6 +194,7 @@
             </div>
         </div>
     </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const fileInput = document.getElementById('video');
@@ -227,6 +228,12 @@
                     // Set the video preview source
                     const videoUrl = URL.createObjectURL(file);
                     if (videoPreview) videoPreview.src = videoUrl;
+
+                    // Show upload progress and processing steps
+                    if (uploadProgress) uploadProgress.classList.remove('hidden');
+                    if (processingSteps) processingSteps.classList.add('show');
+                    if (status) status.classList.add('hidden');
+                    if (error) error.classList.add('hidden');
 
                     // Add error handling for the video preview
                     if (videoPreview) {
