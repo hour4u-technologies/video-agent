@@ -215,24 +215,32 @@
         const videoPreview = document.getElementById('videoPreview');
         const previewContainer = document.getElementById('previewContainer');
 
-        // Preview selected video
+        // Preview selected video using FileReader for larger files
         document.getElementById('video').addEventListener('change', function (e) {
             const file = e.target.files[0];
             if (file) {
-                const url = URL.createObjectURL(file);
-                videoPreview.src = url;
-                previewContainer.style.display = 'block';
+                // Use FileReader for better handling of large video files
+                const reader = new FileReader();
 
-                // Add a load event to ensure the video is ready before showing it
-                videoPreview.onloadmetadata = () => {
-                    console.log('Video preview loaded successfully');
-                    // Perform any additional operations if necessary after the video is loaded
+                // When the file is loaded, set it as the video source
+                reader.onload = function (event) {
+                    videoPreview.src = event.target.result;
+                    previewContainer.style.display = 'block';
+
+                    // Listen for the video to be ready
+                    videoPreview.addEventListener('canplaythrough', function () {
+                        console.log('Video preview is ready to play!');
+                    });
+
+                    // Error handling if the video fails to load
+                    videoPreview.addEventListener('error', function () {
+                        console.error('Error loading video preview');
+                        previewContainer.style.display = 'none';  // Hide preview if error occurs
+                    });
                 };
 
-                videoPreview.onerror = () => {
-                    console.error('Error loading video preview');
-                    previewContainer.style.display = 'none';  // Hide preview in case of error
-                };
+                // Read the file as DataURL (Base64 encoding)
+                reader.readAsDataURL(file);
             }
         });
 
