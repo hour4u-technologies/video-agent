@@ -222,40 +222,40 @@
         document.getElementById('video').addEventListener('change', function (e) {
             const file = e.target.files[0];
             const uploadButton = document.getElementById('uploadButton');
+
             if (file) {
-                // Use FileReader for better handling of large video files
-                const reader = new FileReader();
+                // Check if the file is a video type (e.g., MP4, AVI)
+                const fileType = file.type.split('/')[0];
+                if (fileType !== 'video') {
+                    console.error("Selected file is not a video.");
+                    return;
+                }
 
-                // When the file is loaded, set it as the video source
-                reader.onload = function (event) {
-                    videoPreview.src = event.target.result;
-                    previewContainer.style.display = 'block';
+                // Use URL.createObjectURL to handle large video files more effectively
+                const videoUrl = URL.createObjectURL(file);
 
-                    // Listen for the video to be ready
-                    videoPreview.addEventListener('canplaythrough', function () {
-                        console.log('Video preview is ready to play!');
-                    });
+                // Set the video preview source
+                videoPreview.src = videoUrl;
+                previewContainer.style.display = 'block';
 
-                    // Error handling if the video fails to load
-                    videoPreview.addEventListener('error', function () {
-                        console.error('Error loading video preview');
-                        previewContainer.style.display = 'none'; // Hide preview if error occurs
-                    });
-                };
+                // Listen for the video to be ready
+                videoPreview.addEventListener('canplaythrough', function () {
+                    console.log('Video preview is ready to play!');
+                });
 
-                // Read the file as DataURL (Base64 encoding)
-                reader.readAsDataURL(file);
-
-                // Ensure that the preview container is reset before attempting to load a new video
-                previewContainer.style.display = 'none';
-                videoPreview.src = ''; // Clear the previous video source
+                // Error handling if the video fails to load
+                videoPreview.addEventListener('error', function () {
+                    console.error('Error loading video preview');
+                    previewContainer.style.display = 'none'; // Hide preview if error occurs
+                    alert("Failed to load video preview. Please try another video.");
+                });
 
                 // Show the Upload button
-                uploadButton.style.display = 'inline-block';  // Set the Upload button to visible
+                uploadButton.classList.remove('hidden');
             } else {
                 console.error("No video file selected");
                 // Hide the Upload button if no file is selected
-                uploadButton.style.display = 'none';  // Hide the Upload button
+                uploadButton.classList.add('hidden');
             }
         });
 
