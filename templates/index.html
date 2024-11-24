@@ -209,7 +209,7 @@
             const response = document.getElementById('response');
             const responseText = document.getElementById('responseText');
 
-            // Ensure upload button and processing steps are initially hidden
+            // Initially hide the upload button and disable question input
             if (uploadButton) uploadButton.classList.add('hidden');
             if (processingSteps) processingSteps.classList.remove('show');
             if (status) status.classList.add('hidden');
@@ -278,6 +278,33 @@
                     steps[4].querySelector('i').className = 'fas fa-check text-green-500';
                     steps[4].classList.add('text-green-500');
                 }
+            }
+
+            // Convert timestamps to clickable links
+            function convertTimestamps(responseText) {
+                const timestampRegex = /(\d{1,2}:\d{2}(:\d{2})?)/g;
+                return responseText.replace(timestampRegex, (match) => {
+                    return `<a href="#" class="timestamp-link" data-time="${match}">${match}</a>`;
+                });
+            }
+
+            // Parse timestamp to seconds
+            function parseTimestamp(timestamp) {
+                const parts = timestamp.split(':');
+                return parts.reduce((acc, time) => acc * 60 + parseInt(time), 0);
+            }
+
+            // Add event listeners to clickable timestamps
+            function activateTimestampLinks() {
+                const timestampLinks = document.querySelectorAll('.timestamp-link');
+                timestampLinks.forEach((link) => {
+                    link.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        const time = link.getAttribute('data-time');
+                        const seconds = parseTimestamp(time);
+                        if (videoPreview) videoPreview.currentTime = seconds;
+                    });
+                });
             }
 
             // Handle video upload form submission
@@ -365,8 +392,11 @@
 
                     if (res.ok) {
                         const data = await res.json();
-                        responseText.textContent = data.answer || "No answer available.";
+                        responseText.innerHTML = convertTimestamps(data.answer || "No answer available.");
                         if (response) response.classList.remove('hidden');
+
+                        // Activate timestamp links in the answer
+                        activateTimestampLinks();
                     } else {
                         throw new Error("Failed to fetch the answer.");
                     }
