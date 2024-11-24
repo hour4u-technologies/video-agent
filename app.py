@@ -1,6 +1,7 @@
 from flask import Flask, request, render_template, jsonify, session, send_from_directory
 import os
 import time
+import import subprocess
 import google.generativeai as genai
 from werkzeug.utils import secure_filename
 
@@ -56,6 +57,7 @@ def initialize_gemini_model():
 def index():
     return render_template('index.html')
 
+
 @app.route('/upload', methods=['POST'])
 def upload_video():
     if 'video' not in request.files:
@@ -69,26 +71,39 @@ def upload_video():
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
+
+        # Check if file is an AVI and convert if necessary
+        converted_filepath = filepath
+        if filepath.endswith('.avi'):
+            converted_filename = f"{os.path.splitext(filename)[0]}.mp4"
+            converted_filepath = os.path.join(app.config['UPLOAD_FOLDER'], converted_filename)
+            try:
+                # Transcode using FFmpeg
+                subprocess.run(
+                    ["ffmpeg", "-i", filepath, converted_filepath],
+                    check=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+                # Delete the original AVI file after conversion
+                os.remove(filepath)
+            except subprocess.CalledProcessError as e:
+                return jsonify({'error': 'Failed to convert AVI video.'}), 500
         
         try:
-            # Make the file publicly accessible by saving it in the static folder
-            public_url = f'/static/{filename}'  # Video URL path
-            
-            # Upload to Gemini (This step is retained for AI processing)
-            gemini_file = upload_to_gemini(filepath, mime_type="video/mp4")
+            # Upload to Gemini
+            gemini_file = upload_to_gemini(converted_filepath, mime_type="video/mp4")
             wait_for_files_active([gemini_file])
             
-            # Store the file URI and URL in session
+            # Store the file URI in session
             session['video_file_uri'] = gemini_file.uri
             session['video_file_name'] = gemini_file.name
-            session['video_file_url'] = public_url  # Save the public URL for the preview
             
-            return jsonify({'message': 'Video processed successfully', 'video_url': public_url}), 200
+            return jsonify({'message': 'Video processed successfully', 'video_url': gemini_file.uri}), 200
         except Exception as e:
             return jsonify({'error': str(e)}), 500
     
     return jsonify({'error': 'Invalid file type'}), 400
-
 @app.route('/ask', methods=['POST'])
 def ask_question():
     if 'video_file_uri' not in session or 'video_file_name' not in session:
