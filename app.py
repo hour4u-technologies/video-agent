@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, jsonify, session
+from flask import Flask, request, render_template, jsonify, session, send_from_directory
 import os
 import time
 import google.generativeai as genai
@@ -71,15 +71,19 @@ def upload_video():
         file.save(filepath)
         
         try:
-            # Upload to Gemini
+            # Make the file publicly accessible by saving it in the static folder
+            public_url = f'/static/{filename}'  # Video URL path
+            
+            # Upload to Gemini (This step is retained for AI processing)
             gemini_file = upload_to_gemini(filepath, mime_type="video/mp4")
             wait_for_files_active([gemini_file])
             
-            # Store the file URI in session
+            # Store the file URI and URL in session
             session['video_file_uri'] = gemini_file.uri
             session['video_file_name'] = gemini_file.name
+            session['video_file_url'] = public_url  # Save the public URL for the preview
             
-            return jsonify({'message': 'Video processed successfully'}), 200
+            return jsonify({'message': 'Video processed successfully', 'video_url': public_url}), 200
         except Exception as e:
             return jsonify({'error': str(e)}), 500
     
@@ -114,6 +118,11 @@ def ask_question():
         return jsonify({'answer': response.text}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/static/<filename>')
+def serve_video(filename):
+    """Serve video files from the upload folder."""
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

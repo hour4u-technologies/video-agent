@@ -300,6 +300,7 @@
                     }
                 };
 
+                // Modify the response handling to display the video preview URL
                 xhr.onload = async function () {
                     if (xhr.status === 200) {
                         // Start processing steps simulation
@@ -314,6 +315,12 @@
                         status.textContent = response.message;
                         status.classList.remove('hidden');
                         questionInput.disabled = false;
+
+                        // Add the video preview functionality here
+                        if (response.video_url) {
+                            videoPreview.src = response.video_url;  // Set the video preview source to the URL provided by the backend
+                            previewContainer.style.display = 'block';  // Show the video preview container
+                        }
                     } else {
                         throw new Error(JSON.parse(xhr.responseText).error);
                     }
