@@ -441,6 +441,24 @@
             processingProgressBar.style.width = `${progress}%`;
         }
 
+        // Helper function to parse timestamps and make them clickable
+        function parseTimestampsAndLink(text) {
+            const timestampRegex = /\b\d{1,2}:\d{2}\b/g; // Matches timestamps like "0:02" or "12:34"
+            return text.replace(timestampRegex, match => {
+                const [minutes, seconds] = match.split(':');
+                const timeInSeconds = parseInt(minutes) * 60 + parseInt(seconds);
+                return `<a href="#" class="text-blue-500 underline" onclick="jumpToVideo(${timeInSeconds})">${match}</a>`;
+            });
+        }
+
+        // Function to jump to the specified time in the video
+        function jumpToVideo(timeInSeconds) {
+            if (videoPreview) {
+                videoPreview.currentTime = timeInSeconds;
+                videoPreview.play();
+            }
+        }
+
         uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = new FormData();
@@ -515,35 +533,10 @@
                 const data = await res.json();
 
                 if (res.ok) {
-                    // Get the AI response (answer)
-                    const answer = data.answer;
-
-                    // Regular expression to match timestamps (e.g., 0:02 or 1:30:15)
-                    const timestampPattern = /(\d{1,2}:\d{2}(:\d{2})?)/g;
-
-                    // Replace timestamps with clickable links
-                    const formattedAnswer = answer.replace(timestampPattern, (match) => {
-                        const timestamp = match; // e.g., '0:02' or '1:02:33'
-                        // Return a clickable link
-                        return `<a href="#" class="timestamp" data-time="${timestamp}">${timestamp}</a>`;
-                    });
-
-                    // Set the formatted response in the response text container
-                    responseText.innerHTML = formattedAnswer;
-
-                    // Show the response
+                    // Parse the AI response for timestamps
+                    const parsedResponse = parseTimestampsAndLink(data.answer);
+                    responseText.innerHTML = parsedResponse;
                     response.classList.remove('hidden');
-
-                    // Add click event listener for each timestamp link
-                    const timestamps = document.querySelectorAll('.timestamp');
-                    timestamps.forEach(link => {
-                        link.addEventListener('click', function (e) {
-                            e.preventDefault(); // Prevent the default action (e.g., navigating to #)
-                            const time = link.getAttribute('data-time');
-                            const videoTime = parseTimestamp(time); // Convert the timestamp to seconds
-                            videoPreview.currentTime = videoTime; // Jump to the timestamp in the video
-                        });
-                    });
                 } else {
                     throw new Error(data.error);
                 }
@@ -554,22 +547,6 @@
                 askSpinner.classList.add('hidden');
             }
         });
-
-        // Function to parse timestamp into seconds
-        function parseTimestamp(timestamp) {
-            const parts = timestamp.split(':'); // Split the timestamp into parts
-            let timeInSeconds = 0;
-
-            if (parts.length === 2) {
-                // Format: 0:02 (mm:ss)
-                timeInSeconds = parseInt(parts[0]) * 60 + parseInt(parts[1]);
-            } else if (parts.length === 3) {
-                // Format: 1:02:33 (hh:mm:ss)
-                timeInSeconds = parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
-            }
-
-            return timeInSeconds;
-        }
 
         // Initially disable question input until video is processed
         questionInput.disabled = true;
