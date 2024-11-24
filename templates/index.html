@@ -222,9 +222,11 @@
         document.getElementById('video').addEventListener('change', function (e) {
             const file = e.target.files[0];
             const uploadButton = document.getElementById('uploadButton');
+            const videoPreview = document.getElementById('videoPreview');
+            const previewContainer = document.getElementById('previewContainer');
 
             if (file) {
-                // Check if the file is a video type (e.g., MP4, AVI)
+                // Ensure it's a valid video file
                 const fileType = file.type.split('/')[0];
                 if (fileType !== 'video') {
                     console.error("Selected file is not a video.");
@@ -238,20 +240,20 @@
                 videoPreview.src = videoUrl;
                 previewContainer.style.display = 'block';
 
-                // Listen for the video to be ready
+                // Video load handling
                 videoPreview.addEventListener('canplaythrough', function () {
                     console.log('Video preview is ready to play!');
+                    // Show the Upload button once the video is ready
+                    uploadButton.classList.remove('hidden');
                 });
 
                 // Error handling if the video fails to load
                 videoPreview.addEventListener('error', function () {
                     console.error('Error loading video preview');
-                    previewContainer.style.display = 'none'; // Hide preview if error occurs
+                    previewContainer.style.display = 'none';  // Hide preview if error occurs
                     alert("Failed to load video preview. Please try another video.");
+                    uploadButton.classList.add('hidden'); // Hide upload button if video fails
                 });
-
-                // Show the Upload button
-                uploadButton.classList.remove('hidden');
             } else {
                 console.error("No video file selected");
                 // Hide the Upload button if no file is selected
