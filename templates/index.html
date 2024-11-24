@@ -241,6 +241,12 @@
 
                 // Read the file as DataURL (Base64 encoding)
                 reader.readAsDataURL(file);
+
+                // Ensure that the preview container is reset before attempting to load a new video
+                previewContainer.style.display = 'none';
+                videoPreview.src = '';  // Clear the previous video source
+            } else {
+                console.error("No video file selected");
             }
         });
 
