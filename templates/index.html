@@ -205,6 +205,9 @@
             const status = document.getElementById('status');
             const error = document.getElementById('error');
             const questionInput = document.getElementById('question');
+            const askSpinner = document.getElementById('askSpinner');
+            const response = document.getElementById('response');
+            const responseText = document.getElementById('responseText');
 
             // Ensure upload button and processing steps are initially hidden
             if (uploadButton) uploadButton.classList.add('hidden');
@@ -277,7 +280,7 @@
                 }
             }
 
-            // Handle form submission
+            // Handle video upload form submission
             const uploadForm = document.getElementById('uploadForm');
             uploadForm.addEventListener('submit', async function (e) {
                 e.preventDefault();
@@ -334,6 +337,43 @@
                         error.textContent = err.message;
                         error.classList.remove('hidden');
                     }
+                }
+            });
+
+            // Handle question submission
+            const questionForm = document.getElementById('questionForm');
+            questionForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const question = questionInput.value;
+
+                if (!question) {
+                    alert("Please enter a question.");
+                    return;
+                }
+
+                try {
+                    if (askSpinner) askSpinner.classList.remove('hidden');
+                    if (response) response.classList.add('hidden');
+
+                    const res = await fetch('/ask', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ question }),
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        responseText.textContent = data.answer || "No answer available.";
+                        if (response) response.classList.remove('hidden');
+                    } else {
+                        throw new Error("Failed to fetch the answer.");
+                    }
+                } catch (err) {
+                    alert(err.message || "An error occurred while processing your question.");
+                } finally {
+                    if (askSpinner) askSpinner.classList.add('hidden');
                 }
             });
         });
