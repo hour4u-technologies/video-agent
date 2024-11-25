@@ -75,6 +75,14 @@
             border-radius: 8px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
+
+        #uploadBtn {
+            display: none;
+        }
+
+        #processingSteps {
+            display: none;
+        }
     </style>
 </head>
 
@@ -110,7 +118,7 @@
                     <video id="videoPreview" controls></video>
                 </div>
 
-                <div class="text-center">
+                <div class="text-center" id="uploadBtn">
                     <button type="submit"
                         class="bg-blue-500 text-white px-6 py-2 rounded-lg font-medium inline-flex items-center hover:bg-blue-600 transition-all">
                         <i class="fas fa-upload mr-2"></i>Upload
@@ -172,7 +180,7 @@
             <form id="questionForm" class="space-y-4">
                 <div class="relative">
                     <input type="text" id="question" placeholder="What would you like to know about the video?" required
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                        class="w-full pr-24 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                         disabled>
                     <button type="submit"
                         class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-500 text-white px-4 py-1 rounded-lg font-medium inline-flex items-center">
@@ -214,6 +222,7 @@
         const processingProgressBar = document.getElementById('processingProgressBar');
         const videoPreview = document.getElementById('videoPreview');
         const previewContainer = document.getElementById('previewContainer');
+        const uploadBtn = document.getElementById('uploadBtn');
 
         // Preview selected video using FileReader for larger files
         document.getElementById('video').addEventListener('change', function (e) {
@@ -227,6 +236,9 @@
                     videoPreview.src = event.target.result;
                     previewContainer.style.display = 'block';
 
+                    // Show the upload button when a valid video is selected
+                    uploadBtn.style.display = 'block';
+
                     // Listen for the video to be ready
                     videoPreview.addEventListener('canplaythrough', function () {
                         console.log('Video preview is ready to play!');
@@ -236,6 +248,7 @@
                     videoPreview.addEventListener('error', function () {
                         console.error('Error loading video preview');
                         previewContainer.style.display = 'none';  // Hide preview if error occurs
+                        uploadBtn.style.display = 'none';
                     });
                 };
 
@@ -247,6 +260,9 @@
                 videoPreview.src = '';  // Clear the previous video source
             } else {
                 console.error("No video file selected");
+                // Hide the preview and upload button when no file is selected
+                previewContainer.style.display = 'none';
+                uploadBtn.style.display = 'none';
             }
         });
 
@@ -275,6 +291,12 @@
             // Update processing progress bar
             const progress = ((step - 1) / 3) * 100;
             processingProgressBar.style.width = `${progress}%`;
+
+            if (step === 4 && steps[4]) {
+                steps[4].querySelector('i').className = 'fas fa-check text-green-500';
+                steps[4].classList.add('text-green-500');
+                steps[4].classList.remove('text-gray-400');
+            }
         }
 
         uploadForm.addEventListener('submit', async (e) => {
@@ -286,6 +308,7 @@
             try {
                 // Show upload progress
                 uploadProgress.classList.remove('hidden');
+                processingSteps.style.display = 'block';
                 processingSteps.classList.add('show');
                 status.classList.add('hidden');
                 error.classList.add('hidden');
