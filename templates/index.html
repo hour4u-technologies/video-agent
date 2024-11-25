@@ -224,44 +224,25 @@
         const previewContainer = document.getElementById('previewContainer');
         const uploadBtn = document.getElementById('uploadBtn');
 
-        // Preview selected video using FileReader for larger files
+        // Handle video file selection
         document.getElementById('video').addEventListener('change', function (e) {
             const file = e.target.files[0];
             if (file) {
-                // Use FileReader for better handling of large video files
-                const reader = new FileReader();
-
-                // When the file is loaded, set it as the video source
-                reader.onload = function (event) {
-                    videoPreview.src = event.target.result;
-                    previewContainer.style.display = 'block';
-
-                    // Show the upload button when a valid video is selected
-                    uploadBtn.style.display = 'block';
-
-                    // Listen for the video to be ready
-                    videoPreview.addEventListener('canplaythrough', function () {
-                        console.log('Video preview is ready to play!');
-                    });
-
-                    // Error handling if the video fails to load
-                    videoPreview.addEventListener('error', function () {
-                        console.error('Error loading video preview');
-                        previewContainer.style.display = 'none';  // Hide preview if error occurs
-                        uploadBtn.style.display = 'none';
-                    });
-                };
-
-                // Read the file as DataURL (Base64 encoding)
-                reader.readAsDataURL(file);
-
-                // Ensure that the preview container is reset before attempting to load a new video
+                // Hide the preview initially and reset previous video
                 previewContainer.style.display = 'none';
-                videoPreview.src = '';  // Clear the previous video source
+                videoPreview.src = '';
+
+                // Show the upload button when a valid video is selected
+                uploadBtn.style.display = 'block';
+
+                // Reset progress and hide processing steps
+                uploadProgress.classList.add('hidden');
+                processingSteps.classList.remove('show');
+                status.classList.add('hidden');
+                error.classList.add('hidden');
+
             } else {
-                console.error("No video file selected");
-                // Hide the preview and upload button when no file is selected
-                previewContainer.style.display = 'none';
+                // If no file is selected, hide the upload button
                 uploadBtn.style.display = 'none';
             }
         });
@@ -299,58 +280,59 @@
             }
         }
 
+
+        // Handle upload button click and submit form
         uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const formData = new FormData();
+
             const videoFile = document.getElementById('video').files[0];
+            const formData = new FormData();
             formData.append('video', videoFile);
 
             try {
                 // Show upload progress
                 uploadProgress.classList.remove('hidden');
-                processingSteps.style.display = 'block';
                 processingSteps.classList.add('show');
                 status.classList.add('hidden');
                 error.classList.add('hidden');
 
-                // Simulate upload progress
                 const xhr = new XMLHttpRequest();
+
                 xhr.upload.onprogress = function (e) {
                     if (e.lengthComputable) {
                         const percentComplete = (e.loaded / e.total) * 100;
-                        uploadProgressBar.style.width = percentComplete + '%';
-                        uploadPercentage.textContent = Math.round(percentComplete) + '%';
+                        uploadProgressBar.style.width = `${percentComplete}%`;
+                        uploadPercentage.textContent = `${Math.round(percentComplete)}%`;
                     }
                 };
 
-                // Modify the response handling to display the video preview URL
                 xhr.onload = async function () {
                     if (xhr.status === 200) {
-                        // Start processing steps simulation
-                        const processingSteps = [1000, 2000, 3000, 2000]; // Time for each step in ms
-
+                        // Start processing steps simulation (time for each step in ms)
+                        const processingDurations = [1000, 2000, 3000, 2000];
                         for (let i = 1; i <= 4; i++) {
                             updateProcessingStep(i);
-                            await new Promise(resolve => setTimeout(resolve, processingSteps[i - 1]));
+                            await new Promise((resolve) => setTimeout(resolve, processingDurations[i - 1]));
                         }
 
                         const response = JSON.parse(xhr.responseText);
-                        status.textContent = response.message;
-                        status.classList.remove('hidden');
-                        questionInput.disabled = false;
 
-                        // Add the video preview functionality here
                         if (response.video_url) {
-                            videoPreview.src = response.video_url;  // Set the video preview source to the URL provided by the backend
+                            // Use the video URL from the response for the preview
+                            videoPreview.src = response.video_url;
                             previewContainer.style.display = 'block';  // Show the video preview container
                         }
+
+                        status.textContent = response.message || "Video uploaded successfully!";
+                        status.classList.remove('hidden');
+                        questionInput.disabled = false;
                     } else {
-                        throw new Error(JSON.parse(xhr.responseText).error);
+                        throw new Error(JSON.parse(xhr.responseText).error || 'Unknown error occurred');
                     }
                 };
 
                 xhr.onerror = function () {
-                    throw new Error('Upload failed');
+                    throw new Error('Upload failed. Please try again.');
                 };
 
                 xhr.open('POST', '/upload', true);
